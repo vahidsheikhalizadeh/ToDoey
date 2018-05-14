@@ -7,39 +7,22 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController {
 
     var itemArray = [Item]()
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
-    let defaults = UserDefaults.standard
     
     
     override func viewDidLoad() {
-        // Do any additional setup after loading the view, typically from a nib.
+        
         super.viewDidLoad()
         
-        let newItem = Item()
-        newItem.title = "learn swift"
-        itemArray.append(newItem)
-        
-        
-        let newItem2 = Item()
-        newItem2.title = "kotlin"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Item()
-        newItem3.title = "iOS"
-        itemArray.append(newItem3)
-        
-    
-        
-        if let items = defaults.array(forKey: "ToDoListArray") as? [Item] {
-            itemArray = items
-        }
-        
+        loadItem()
+      
     }
-    
     
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -66,11 +49,15 @@ class TodoListViewController: UITableViewController {
     
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
-        // print(itemArray[indexPath.row])
+        
+        // update : itemArray[indexPath.row].setValue("completed", forKey: "title")
+        // delete : context.delete(itemArray[indexPath.row])
+        //          itemArray.remove(at: indexPath.row)
+        
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
-        tableView.reloadData()
+        saveItem()
         
         tableView.deselectRow(at: indexPath, animated: true)
         
@@ -88,13 +75,16 @@ class TodoListViewController: UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             // what happens once user click on add button on UIAlert
             
-            let newItem = Item()
-            newItem.title = textField.text!
+            // How to access app delegate as an object
             
+            
+            let newItem = Item(context: self.context)
+            newItem.title = textField.text!
+            newItem.done = false
             
             self.itemArray.append(newItem)
             
-            self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+            self.saveItem()
             
             self.tableView.reloadData()
             
@@ -112,5 +102,70 @@ class TodoListViewController: UITableViewController {
         
     }
     
+    //MARK: - save items function
+    
+    
+    func saveItem(){
+        do {
+            try context.save()
+        }
+        
+        catch{
+            print("*** Error saving context \(error)")
+        }
+        
+        self.tableView.reloadData()
+    }
+    
+    
+    //MARK: - load items function
+    
+    func loadItem(with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+        
+         // specfying the datatype of the output
+        //
+        
+        do{
+                itemArray =  try context.fetch(request)
+        }
+        catch{
+            print("Error fetching data from context \(error)")
+        }
+        
+        tableView.reloadData()
+        
+    }
+    
+    
+    
 }
-
+// MARK: - search bar methods
+extension TodoListViewController: UISearchBarDelegate{
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+       loadItem(with: request)
+        
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        
+        if searchBar.text?.count == 0 {
+            
+            loadItem()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+        else {
+            searchBarSearchButtonClicked(searchBar)
+        }
+    }
+}
