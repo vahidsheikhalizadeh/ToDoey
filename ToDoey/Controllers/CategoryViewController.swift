@@ -48,6 +48,9 @@ class CategoryViewController: UITableViewController {
         
         let destinationVS = segue.destination as! TodoListViewController
         
+        if let indexPath = tableView.indexPathForSelectedRow {
+           destinationVS.selectedCategory = categoryArray[indexPath.row]
+        }
     }
     
     
@@ -62,7 +65,7 @@ class CategoryViewController: UITableViewController {
         
         let alert = UIAlertController(title: "Add New Category", message: "", preferredStyle: .alert)
         
-        let action = UIAlertAction(title: "Add Category", style: .default) { (action) in
+        let action = UIAlertAction(title: "Add", style: .default) { (action) in
             
             
             let newCategory = Category(context: self.context)
